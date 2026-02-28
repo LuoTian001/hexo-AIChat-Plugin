@@ -260,7 +260,7 @@ class AIChatPlugin {
             this.startRight = parseFloat(this.container.style.right) || parseFloat(computedStyle.right) || 0;
             this.startBottom = parseFloat(this.container.style.bottom) || parseFloat(computedStyle.bottom) || 0;
 
-            // 科学严谨的核心：记录拖拽开始时，聊天面板四个边缘在屏幕上的真实物理像素坐标
+            // 记录拖拽开始时，聊天面板四个边缘在屏幕上的真实物理像素坐标
             this.startRect = this.chatPanel.getBoundingClientRect();
 
             // 预判锚点方向
@@ -450,7 +450,7 @@ class AIChatPlugin {
 
             this.chatPanel.className = 'AIChat-Plug-in-panel';
             
-            // 智能分配弹出方向：始终向屏幕内部展开
+            // 始终向屏幕内部展开
             if (isTop && isLeft) this.chatPanel.classList.add('AIChat-pos-top-left');
             else if (isTop && !isLeft) this.chatPanel.classList.add('AIChat-pos-top-right');
             else if (!isTop && isLeft) this.chatPanel.classList.add('AIChat-pos-bottom-left');
