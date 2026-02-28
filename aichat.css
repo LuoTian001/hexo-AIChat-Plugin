@@ -1,0 +1,56 @@
+/* 顶层命名空间 */
+.AIChat-Plug-in {
+    position: fixed;
+    z-index: 99999; /* 确保在 Butterfly 主题层级之上 */
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Siri 风格悬浮球 */
+.AIChat-Plug-in .AIChat-Plug-in-fab {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffffff, #d8e0ff, #8a9bff);
+    box-shadow: 0 0 15px rgba(138, 155, 255, 0.6), 
+                inset 0 0 10px rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    background-size: cover;
+    background-position: center;
+    animation: siri-breathe 3s infinite ease-in-out;
+}
+
+.AIChat-Plug-in .AIChat-Plug-in-fab:hover {
+    transform: scale(1.1);
+}
+
+@keyframes siri-breathe {
+    0% { box-shadow: 0 0 15px rgba(138, 155, 255, 0.6), inset 0 0 10px rgba(255,255,255,0.8); }
+    50% { box-shadow: 0 0 25px rgba(255, 105, 180, 0.5), inset 0 0 15px rgba(255,255,255,0.9); }
+    100% { box-shadow: 0 0 15px rgba(138, 155, 255, 0.6), inset 0 0 10px rgba(255,255,255,0.8); }
+}
+
+/* 聊天面板基础样式 */
+.AIChat-Plug-in .AIChat-Plug-in-panel {
+    width: 350px;
+    height: 500px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform-origin: bottom right;
+    animation: panel-pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes panel-pop-in {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
