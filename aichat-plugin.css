@@ -1,7 +1,7 @@
 .AIChat-Plug-in {
     position: fixed;
     bottom: 30px;
-    right: 80px;
+    right: 80px; 
     z-index: 999999;
     width: 56px;
     height: 56px;
@@ -58,7 +58,7 @@
     flex-direction: column;
     overflow: hidden;
     opacity: 0;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out; 
 }
 
 .AIChat-pos-bottom-right { bottom: 70px; right: 0; transform-origin: bottom right; transform: scale(0.8) translateY(20px); }
@@ -261,4 +261,80 @@
         max-height: 600px;
         transform-origin: bottom right;
     }
+}
+
+/* --- 黑暗主题适配 --- */
+.AIChat-Plug-in-header {
+    padding: 5px 15px; 
+    cursor: grab;
+}
+.AIChat-Plug-in-header:active { cursor: grabbing; }
+
+.AIChat-title { font-size: 14px; }
+.AIChat-tools svg { height: 14px; }
+
+.AIChat-Plug-in {
+    bottom: 30px;
+    right: 120px;
+}
+
+/* --- 拖拽与缩放控制柄样式 --- */
+.AIChat-resize-handle { 
+    position: absolute; 
+    z-index: 10; 
+    touch-action: none; 
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.AIChat-resize-t { top: -8px; left: 0; right: 0; height: 16px; cursor: ns-resize; }
+.AIChat-resize-b { bottom: -8px; left: 0; right: 0; height: 16px; cursor: ns-resize; }
+.AIChat-resize-l { left: -8px; top: 0; bottom: 0; width: 16px; cursor: ew-resize; }
+.AIChat-resize-r { right: -8px; top: 0; bottom: 0; width: 16px; cursor: ew-resize; }
+
+.AIChat-resize-tl { top: -10px; left: -10px; width: 24px; height: 24px; cursor: nwse-resize; }
+.AIChat-resize-tr { top: -10px; right: -10px; width: 24px; height: 24px; cursor: nesw-resize; }
+.AIChat-resize-bl { bottom: -10px; left: -10px; width: 24px; height: 24px; cursor: nesw-resize; }
+.AIChat-resize-br { bottom: -10px; right: -10px; width: 24px; height: 24px; cursor: nwse-resize; }
+
+.AIChat-resize-t:hover, .AIChat-resize-b:hover { background: rgba(0, 122, 255, 0.15); }
+.AIChat-resize-l:hover, .AIChat-resize-r:hover { background: rgba(0, 122, 255, 0.15); }
+.AIChat-resize-tl:hover, .AIChat-resize-tr:hover, 
+.AIChat-resize-bl:hover, .AIChat-resize-br:hover { 
+    background: rgba(0, 122, 255, 0.25); 
+    border-radius: 50%; 
+}
+
+/* --- Hexo Butterfly 黑暗主题适配 --- */
+html[data-theme="dark"] .AIChat-Plug-in-panel {
+    background: rgba(30, 30, 30, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+html[data-theme="dark"] .AIChat-Plug-in-header { 
+    background: rgba(40, 40, 40, 0.6); 
+    border-bottom-color: rgba(255, 255, 255, 0.05); 
+}
+html[data-theme="dark"] .AIChat-title { color: #eee; }
+html[data-theme="dark"] .AIChat-tools span { color: #aaa; }
+html[data-theme="dark"] .AIChat-tools span:hover { color: #fff; }
+html[data-theme="dark"] .AIChat-msg-ai .AIChat-Plug-in-bubble { 
+    background: rgba(50, 50, 50, 0.9); 
+    color: #eee; 
+    border-color: rgba(255, 255, 255, 0.05); 
+}
+html[data-theme="dark"] .AIChat-Plug-in-input-area { 
+    background: rgba(40, 40, 40, 0.6); 
+    border-top-color: rgba(255, 255, 255, 0.05); 
+}
+html[data-theme="dark"] #AIChat-Input { 
+    background: rgba(60, 60, 60, 0.8); 
+    border-color: rgba(255, 255, 255, 0.1); 
+    color: #eee; 
+}
+html[data-theme="dark"] .AIChat-Plug-in-quick-action { 
+    color: #0a84ff; 
+    background: rgba(10, 132, 255, 0.15); 
+}
+html[data-theme="dark"] .AIChat-Plug-in-quick-action:hover { 
+    background: rgba(10, 132, 255, 0.25); 
 }

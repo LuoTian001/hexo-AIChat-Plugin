@@ -104,6 +104,14 @@ class AIChatPlugin {
             <div class="AIChat-Plug-in-input-area">
                 <textarea id="AIChat-Input" rows="1" placeholder="${this.ui.placeholder}"></textarea>
             </div>
+            <div class="AIChat-resize-handle AIChat-resize-t" data-pos="t"></div>
+            <div class="AIChat-resize-handle AIChat-resize-r" data-pos="r"></div>
+            <div class="AIChat-resize-handle AIChat-resize-b" data-pos="b"></div>
+            <div class="AIChat-resize-handle AIChat-resize-l" data-pos="l"></div>
+            <div class="AIChat-resize-handle AIChat-resize-tl" data-pos="tl"></div>
+            <div class="AIChat-resize-handle AIChat-resize-tr" data-pos="tr"></div>
+            <div class="AIChat-resize-handle AIChat-resize-bl" data-pos="bl"></div>
+            <div class="AIChat-resize-handle AIChat-resize-br" data-pos="br"></div>
         `;
 
         container.appendChild(chatPanel);
@@ -172,27 +180,27 @@ class AIChatPlugin {
         // 如果配置允许，初始化拖拽
         if (this.ui.draggable) {
             this.initDrag();
+            this.initResize();
         }
-        window.addEventListener('resize', () => this.handleResize());
+        window.addEventListener('resize', () => this.enforceBounds());
         this.renderHistory();
     }
 
     initDrag() {
         let isDragging = false;
         let startX, startY, initialRight, initialBottom;
+        const header = this.chatPanel.querySelector('.AIChat-Plug-in-header');
 
         const dragStart = (e) => {
+            if (e.target.closest('.AIChat-tools')) return; // 防止拖拽与工具栏点击冲突
             if (e.type === 'touchstart') e = e.touches[0];
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = e.clientX; startY = e.clientY;
 
             const computedStyle = window.getComputedStyle(this.container);
             initialRight = parseFloat(computedStyle.right) || 0;
             initialBottom = parseFloat(computedStyle.bottom) || 0;
 
-            isDragging = true;
-            this.hasMoved = false;
-
+            isDragging = true; this.hasMoved = false;
             document.addEventListener('mousemove', dragMove, { passive: false });
             document.addEventListener('mouseup', dragEnd);
             document.addEventListener('touchmove', dragMove, { passive: false });
@@ -201,38 +209,18 @@ class AIChatPlugin {
 
         const dragMove = (e) => {
             if (!isDragging) return;
-            let clientX = e.clientX;
-            let clientY = e.clientY;
-            
+            let clientX = e.clientX, clientY = e.clientY;
             if (e.type === 'touchmove') {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
+                clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
                 e.preventDefault(); 
             }
-
-            const dx = clientX - startX;
-            const dy = clientY - startY;
+            const dx = clientX - startX, dy = clientY - startY;
 
             if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
                 this.hasMoved = true;
-                
-                let newRight = initialRight - dx;
-                let newBottom = initialBottom - dy;
-
-                // 边界碰撞检测
-                const safeMargin = 10;
-                const fabSize = 56; // 悬浮球的宽高
-                const maxRight = window.innerWidth - fabSize - safeMargin;
-                const maxBottom = window.innerHeight - fabSize - safeMargin;
-
-                // 限制在屏幕范围内
-                if (newRight < safeMargin) newRight = safeMargin;
-                if (newRight > maxRight) newRight = maxRight;
-                if (newBottom < safeMargin) newBottom = safeMargin;
-                if (newBottom > maxBottom) newBottom = maxBottom;
-
-                this.container.style.right = newRight + 'px';
-                this.container.style.bottom = newBottom + 'px';
+                this.container.style.right = (initialRight - dx) + 'px';
+                this.container.style.bottom = (initialBottom - dy) + 'px';
+                this.enforceBounds(); // 实时动态边界干预
             }
         };
 
@@ -244,37 +232,202 @@ class AIChatPlugin {
             document.removeEventListener('touchend', dragEnd);
         };
 
+        // 绑定悬浮球本体拖拽，与面板 Header 区域拖拽
         this.fab.addEventListener('mousedown', dragStart);
         this.fab.addEventListener('touchstart', dragStart, { passive: false });
+        header.addEventListener('mousedown', dragStart);
+        header.addEventListener('touchstart', dragStart, { passive: false });
     }
 
-    handleResize() {
+    initResize() {
+        const handles = this.chatPanel.querySelectorAll('.AIChat-resize-handle');
+        let isResizing = false;
+        
+        const startResize = (e) => {
+            if (e.type === 'touchstart') e = e.touches[0];
+            e.stopPropagation();
+            isResizing = true;
+            this.resizePos = e.target.getAttribute('data-pos');
+            this.startX = e.clientX; 
+            this.startY = e.clientY;
+            
+            // 记录初始宽高
+            this.startW = this.chatPanel.offsetWidth;
+            this.startH = this.chatPanel.offsetHeight;
+            
+            // 记录初始绝对坐标
+            const computedStyle = window.getComputedStyle(this.container);
+            this.startRight = parseFloat(this.container.style.right) || parseFloat(computedStyle.right) || 0;
+            this.startBottom = parseFloat(this.container.style.bottom) || parseFloat(computedStyle.bottom) || 0;
+
+            // 科学严谨的核心：记录拖拽开始时，聊天面板四个边缘在屏幕上的真实物理像素坐标
+            this.startRect = this.chatPanel.getBoundingClientRect();
+
+            // 预判锚点方向
+            this.isTopAnchored = this.chatPanel.classList.contains('AIChat-pos-top-left') || this.chatPanel.classList.contains('AIChat-pos-top-right');
+            this.isLeftAnchored = this.chatPanel.classList.contains('AIChat-pos-top-left') || this.chatPanel.classList.contains('AIChat-pos-bottom-left');
+
+            document.body.style.userSelect = 'none'; 
+            document.addEventListener('mousemove', doResize, { passive: false });
+            document.addEventListener('mouseup', stopResize);
+            document.addEventListener('touchmove', doResize, { passive: false });
+            document.addEventListener('touchend', stopResize);
+        };
+
+        const doResize = (e) => {
+            if (!isResizing) return;
+            let clientX = e.clientX, clientY = e.clientY;
+            if (e.type === 'touchmove') { 
+                clientX = e.touches[0].clientX; 
+                clientY = e.touches[0].clientY; 
+                e.preventDefault(); 
+            }
+
+            let dx = clientX - this.startX;
+            let dy = clientY - this.startY;
+
+            const ww = window.innerWidth;
+            const wh = window.innerHeight;
+            const safeTop = 70, safeX = 15, safeY = 15;
+            const minW = 280, minH = 350;
+
+            if (this.resizePos.includes('l')) {
+                const min_dx = safeX - this.startRect.left; 
+                if (dx < min_dx) dx = min_dx; // 触碰屏幕左边缘死角，截断向左位移
+                const max_dx = this.startW - minW;
+                if (dx > max_dx) dx = max_dx; // 触碰面板最小宽度，截断向右位移
+            }
+            if (this.resizePos.includes('r')) {
+                const max_dx = (ww - safeX) - this.startRect.right;
+                if (dx > max_dx) dx = max_dx; // 触碰屏幕右边缘死角，截断向右位移
+                const min_dx = minW - this.startW;
+                if (dx < min_dx) dx = min_dx; // 触碰面板最小宽度，截断向左位移
+            }
+            if (this.resizePos.includes('t')) {
+                const min_dy = safeTop - this.startRect.top;
+                if (dy < min_dy) dy = min_dy; // 触碰屏幕上边缘死角，截断向上位移
+                const max_dy = this.startH - minH;
+                if (dy > max_dy) dy = max_dy; // 触碰面板最小高度，截断向下位移
+            }
+            if (this.resizePos.includes('b')) {
+                const max_dy = (wh - safeY) - this.startRect.bottom;
+                if (dy > max_dy) dy = max_dy; // 触碰屏幕下边缘死角，截断向下位移
+                const min_dy = minH - this.startH;
+                if (dy < min_dy) dy = min_dy; // 触碰面板最小高度，截断向上位移
+            }
+
+            let newW = this.startW; 
+            let newH = this.startH;
+            let newRight = this.startRight; 
+            let newBottom = this.startBottom;
+
+            if (this.resizePos.includes('l')) { 
+                newW = this.startW - dx; 
+                if (this.isLeftAnchored) newRight = this.startRight - dx; 
+            } 
+            else if (this.resizePos.includes('r')) { 
+                newW = this.startW + dx; 
+                if (!this.isLeftAnchored) newRight = this.startRight - dx; 
+            }
+
+            if (this.resizePos.includes('t')) { 
+                newH = this.startH - dy; 
+                if (this.isTopAnchored) newBottom = this.startBottom - dy; 
+            } 
+            else if (this.resizePos.includes('b')) { 
+                newH = this.startH + dy; 
+                if (!this.isTopAnchored) newBottom = this.startBottom - dy; 
+            }
+
+            this.chatPanel.style.maxWidth = 'none'; 
+            this.chatPanel.style.maxHeight = 'none';
+            this.chatPanel.style.width = newW + 'px';
+            this.chatPanel.style.height = newH + 'px';
+            this.container.style.right = newRight + 'px';
+            this.container.style.bottom = newBottom + 'px';
+        };
+
+        const stopResize = () => {
+            isResizing = false;
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+            document.removeEventListener('touchmove', doResize);
+            document.removeEventListener('touchend', stopResize);
+        };
+
+        handles.forEach(h => {
+            h.addEventListener('mousedown', startResize);
+            h.addEventListener('touchstart', startResize, { passive: false });
+        });
+    }
+
+    enforceBounds() {
         if (!this.container) return;
 
-        if (!this.container.style.right || !this.container.style.bottom) return;
-
-        const safeMargin = 10;
-        const fabSize = 56;
+        const computed = window.getComputedStyle(this.container);
+        let right = parseFloat(this.container.style.right) || parseFloat(computed.right) || 0;
+        let bottom = parseFloat(this.container.style.bottom) || parseFloat(computed.bottom) || 0;
         
-        let currentRight = parseFloat(this.container.style.right);
-        let currentBottom = parseFloat(this.container.style.bottom);
+        const ww = window.innerWidth;
+        const wh = window.innerHeight;
+        const safeTop = 70; // 规避 Hexo/Butterfly 顶部导航栏
+        const safeX = 15;
+        const safeY = 15;
+        
+        if (this.chatPanel.classList.contains('AIChat-panel-show')) {
+            const maxW = ww - safeX * 2;
+            const maxH = wh - safeTop - safeY;
+            let currentW = this.chatPanel.offsetWidth;
+            let currentH = this.chatPanel.offsetHeight;
 
-        // 计算当前窗口的最新边界
-        const maxRight = window.innerWidth - fabSize - safeMargin;
-        const maxBottom = window.innerHeight - fabSize - safeMargin;
+            // 超出屏幕时先压缩自身宽高
+            if (currentW > maxW) { this.chatPanel.style.width = maxW + 'px'; currentW = maxW; }
+            if (currentH > maxH) { this.chatPanel.style.height = maxH + 'px'; currentH = maxH; }
 
-        let newRight = currentRight;
-        let newBottom = currentBottom;
-
-        // 校验并修正越界坐标
-        if (newRight > maxRight) newRight = maxRight;
-        if (newBottom > maxBottom) newBottom = maxBottom;
-        if (newRight < safeMargin) newRight = safeMargin;
-        if (newBottom < safeMargin) newBottom = safeMargin;
-
-        // 应用修正后的坐标
-        this.container.style.right = newRight + 'px';
-        this.container.style.bottom = newBottom + 'px';
+            let distRight = right;
+            let distBottom = bottom;
+            let distLeft = ww - right - 56;
+            let distTop = wh - bottom - 56;
+            
+            // 精确计算四个方向展开时的绝对屏幕距离
+            if (this.chatPanel.classList.contains('AIChat-pos-bottom-right')) {
+                distRight = right;
+                distBottom = bottom + 70;
+                distLeft = ww - distRight - currentW;
+                distTop = wh - distBottom - currentH;
+            } else if (this.chatPanel.classList.contains('AIChat-pos-bottom-left')) {
+                distLeft = ww - right - 56;
+                distBottom = bottom + 70;
+                distRight = ww - distLeft - currentW;
+                distTop = wh - distBottom - currentH;
+            } else if (this.chatPanel.classList.contains('AIChat-pos-top-right')) {
+                distRight = right;
+                distTop = wh - bottom - 56 + 70;
+                distBottom = wh - distTop - currentH;
+                distLeft = ww - distRight - currentW;
+            } else if (this.chatPanel.classList.contains('AIChat-pos-top-left')) {
+                distLeft = ww - right - 56;
+                distTop = wh - bottom - 56 + 70;
+                distRight = ww - distLeft - currentW;
+                distBottom = wh - distTop - currentH;
+            }
+            
+            // 根据距离施加反向推力
+            if (distTop < safeTop) bottom -= (safeTop - distTop); 
+            if (distBottom < safeY) bottom += (safeY - distBottom); 
+            if (distLeft < safeX) right -= (safeX - distLeft); 
+            if (distRight < safeX) right += (safeX - distRight); 
+        } 
+        
+        // 确保最终坐标
+        if (right < safeX) right = safeX;
+        if (right > ww - 56 - safeX) right = ww - 56 - safeX;
+        if (bottom < safeY) bottom = safeY;
+        if (bottom > wh - 56 - safeY) bottom = wh - 56 - safeY;
+        
+        this.container.style.right = right + 'px';
+        this.container.style.bottom = bottom + 'px';
     }
 
     triggerSend() {
@@ -308,6 +461,7 @@ class AIChatPlugin {
             
             this.chatPanel.classList.add('AIChat-panel-show');
             this.fab.classList.add('AIChat-fab-active');
+            setTimeout(() => this.enforceBounds(), 10);
             
             this.renderHistory(); 
             this.chatInput.focus();
