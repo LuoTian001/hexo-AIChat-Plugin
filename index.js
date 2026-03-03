@@ -1,6 +1,5 @@
-// index.js
-import { existsSync, readFileSync, createReadStream } from 'fs';
-import { join } from 'path';
+const { existsSync, readFileSync, createReadStream } = require('fs');
+const { join } = require('path');
 
 function deepMerge(target, source) {
     for (const key in source) {
@@ -19,7 +18,6 @@ if (existsSync(defaultConfigPath)) {
 }
 
 const userConfig = hexo.config.aichat || {};
-
 const finalConfig = deepMerge(defaultConfig, userConfig);
 
 if (finalConfig.enable === false) return;
@@ -33,6 +31,10 @@ hexo.extend.generator.register('aichat_assets', () => {
         {
             path: 'aichat/aichat-plugin.css',
             data: () => createReadStream(join(__dirname, 'assets/aichat-plugin.css'))
+        },
+        {
+            path: 'aichat/aichat-config.js',
+            data: `window.AIChatPluginConfig = ${JSON.stringify(finalConfig)};`
         }
     ];
 });
@@ -40,8 +42,6 @@ hexo.extend.generator.register('aichat_assets', () => {
 hexo.extend.injector.register('body_end', `
     <link rel="stylesheet" href="/aichat/aichat-plugin.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script>
-        window.AIChatPluginConfig = ${JSON.stringify(finalConfig)};
-    </script>
-    <script src="/aichat/aichat-plugin.js"></script>
+    <script src="/aichat/aichat-config.js"></script>
+    <script src="/aichat/aichat-plugin.js" defer></script>
 `);
