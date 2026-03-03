@@ -304,37 +304,74 @@
     border-radius: 50%; 
 }
 
-/* --- Hexo Butterfly 黑暗主题适配 --- */
-html[data-theme="dark"] .AIChat-Plug-in-panel {
-    background: rgba(30, 30, 30, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
-html[data-theme="dark"] .AIChat-Plug-in-header { 
-    background: rgba(40, 40, 40, 0.6); 
-    border-bottom-color: rgba(255, 255, 255, 0.05); 
-}
-html[data-theme="dark"] .AIChat-title { color: #eee; }
-html[data-theme="dark"] .AIChat-tools span { color: #aaa; }
-html[data-theme="dark"] .AIChat-tools span:hover { color: #fff; }
-html[data-theme="dark"] .AIChat-msg-ai .AIChat-Plug-in-bubble { 
-    background: rgba(50, 50, 50, 0.9); 
-    color: #eee; 
-    border-color: rgba(255, 255, 255, 0.05); 
-}
-html[data-theme="dark"] .AIChat-Plug-in-input-area { 
-    background: rgba(40, 40, 40, 0.6); 
-    border-top-color: rgba(255, 255, 255, 0.05); 
-}
-html[data-theme="dark"] #AIChat-Input { 
-    background: rgba(60, 60, 60, 0.8); 
-    border-color: rgba(255, 255, 255, 0.1); 
-    color: #eee; 
-}
-html[data-theme="dark"] .AIChat-Plug-in-quick-action { 
-    color: #0a84ff; 
-    background: rgba(10, 132, 255, 0.15); 
-}
-html[data-theme="dark"] .AIChat-Plug-in-quick-action:hover { 
-    background: rgba(10, 132, 255, 0.25); 
+/* --- 通用黑暗模式适配 --- */
+@media (prefers-color-scheme: dark) {
+    .AIChat-Plug-in-panel,
+    html.dark .AIChat-Plug-in-panel,
+    html[data-theme="dark"] .AIChat-Plug-in-panel {
+        background: rgba(30, 30, 30, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .AIChat-Plug-in-header,
+    html.dark .AIChat-Plug-in-header,
+    html[data-theme="dark"] .AIChat-Plug-in-header {
+        background: rgba(40, 40, 40, 0.6); 
+        border-bottom-color: rgba(255, 255, 255, 0.05); 
+    }
+    
+    .AIChat-title,
+    html.dark .AIChat-title,
+    html[data-theme="dark"] .AIChat-title { 
+        color: #eee; 
+    }
+
+    .AIChat-tools span,
+    html.dark .AIChat-tools span,
+    html[data-theme="dark"] .AIChat-tools span { 
+        color: #aaa; 
+    }
+
+    .AIChat-tools span:hover,
+    html.dark .AIChat-tools span:hover,
+    html[data-theme="dark"] .AIChat-tools span:hover { 
+        color: #fff; 
+    }
+
+    .AIChat-msg-ai .AIChat-Plug-in-bubble,
+    html.dark .AIChat-msg-ai .AIChat-Plug-in-bubble,
+    html[data-theme="dark"] .AIChat-msg-ai .AIChat-Plug-in-bubble { 
+        background: rgba(50, 50, 50, 0.9); 
+        color: #eee; 
+        border-color: rgba(255, 255, 255, 0.05); 
+    }
+
+    .AIChat-Plug-in-input-area,
+    html.dark .AIChat-Plug-in-input-area,
+    html[data-theme="dark"] .AIChat-Plug-in-input-area { 
+        background: rgba(40, 40, 40, 0.6); 
+        border-top-color: rgba(255, 255, 255, 0.05); 
+    }
+
+    #AIChat-Input,
+    html.dark #AIChat-Input,
+    html[data-theme="dark"] #AIChat-Input { 
+        background: rgba(60, 60, 60, 0.8); 
+        border-color: rgba(255, 255, 255, 0.1); 
+        color: #eee; 
+    }
+
+    .AIChat-Plug-in-quick-action,
+    html.dark .AIChat-Plug-in-quick-action,
+    html[data-theme="dark"] .AIChat-Plug-in-quick-action { 
+        color: #0a84ff; 
+        background: rgba(10, 132, 255, 0.15); 
+    }
+
+    .AIChat-Plug-in-quick-action:hover,
+    html.dark .AIChat-Plug-in-quick-action:hover,
+    html[data-theme="dark"] .AIChat-Plug-in-quick-action:hover { 
+        background: rgba(10, 132, 255, 0.25); 
+    }
 }

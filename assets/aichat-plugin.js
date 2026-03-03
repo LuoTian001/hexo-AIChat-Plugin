@@ -1,13 +1,21 @@
 // aichat-plugin.js
 class AIChatPlugin {
-    constructor(config = {}) {
-        // 配置项路径，支持外部传入
-        this.configUrl = config.configUrl || '/waifu-chat.json'; 
-        this.apiUrlOverride = config.apiUrl;
+
+    constructor() {
+        const injectedConfig = window.AIChatPluginConfig || {};
+
+        this.apiUrl = injectedConfig.api?.url || '/api/chat';
+        this.ui = injectedConfig.ui || {};
+        this.chatCfg = injectedConfig.chat || {};
+
+        const rawPrompt = this.chatCfg.systemPrompt;
+        this.systemPrompt = Array.isArray(rawPrompt) ? rawPrompt.join('\n') : (rawPrompt || "");
+        
+        this.storageKey = this.chatCfg.storageKey;
+        this.maxHistory = this.chatCfg.maxHistory;
         this.blogIndex = [];
         this._welcomeInterval = null;
-        
-        // 页面加载完成后初始化
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
         } else {
@@ -16,63 +24,47 @@ class AIChatPlugin {
     }
 
     async init() {
-        await this.loadConfig();
-        this.initBlogIndex();
+        await this.initBlogIndex(); 
         this.initUI();
     }
 
-    async loadConfig() {
+    async loadUIConfig() {
+        let extConfig = {};
         try {
             const timestamp = new Date().getTime();
-            const res = await fetch(`${this.configUrl}?t=${timestamp}`);
-            if (!res.ok) throw new Error('Config file not found');
-            const extConfig = await res.json();
-            this.applyConfig(extConfig);
-        } catch (e) {
-            console.warn("无法加载配置文件，将使用内置默认配置...", e);
-            this.applyConfig({}); 
-        }
-    }
-
-    applyConfig(cfg) {
-        this.apiUrl = this.apiUrlOverride || cfg?.api?.url || '/api/chat';
-        this.ui = Object.assign({
-            title: "AI 助手",
-            placeholder: "输入你想问的...",
-            errorMsg: "网络连接中断，请稍后再试。",
-            typingSpeed: 25,
-            fabIcon: "",
-            draggable: true
-        }, cfg?.ui || {});
-        
-        this.chatCfg = Object.assign({
-            storageKey: "aichat_plugin_history",
-            maxHistory: 20,
-            pageContextMaxLength: 3000,
-            pageContextSelector: "#article-container",
-            searchXmlPath: "/search.xml",
-            welcomeMsg: "欢迎来到这里！请问有什么需要帮助你的？",
-            welcomeOptions: [],
-            contextTemplate: {
-                pageContextTitle: "=== 用户当前阅读的页面 ===",
-                searchContextTitle: "=== 全局检索结果 ===",
-                instruction: "基于\"当前阅读页面\"或\"全局检索\"作答。补充上下文：",
-                userQuestion: "用户实际提问:",
-                truncateMsg: "[系统提示：页面内容过长已截断。]"
+            const res = await fetch(`${this.coreOptions.uiConfigUrl}?t=${timestamp}`);
+            if (res.ok) {
+                extConfig = await res.json();
             }
-        }, cfg?.chat || {});
-
-        const rawPrompt = cfg?.chat?.systemPrompt;
-        const defaultPrompt = "你是一个有用的 AI 助手。";
-        if (Array.isArray(rawPrompt)) {
-            this.systemPrompt = rawPrompt.join('\n');
-        } else if (typeof rawPrompt === 'string') {
-            this.systemPrompt = rawPrompt;
-        } else {
-            this.systemPrompt = defaultPrompt;
+        } catch (e) {
+            console.warn("AIChat: Failed to load custom UI configuration. Using default UI.", e);
         }
-        this.storageKey = this.chatCfg.storageKey;
-        this.maxHistory = this.chatCfg.maxHistory;
+
+        this.config = {
+            api: this.coreOptions.api,
+            pageContextSelector: this.coreOptions.pageContextSelector,
+            searchXmlPath: this.coreOptions.searchXmlPath,
+            ui: Object.assign({
+                title: "AI assistant",
+                placeholder: "Input what you want to ask...",
+                errorMsg: "The network connection is interrupted. Please try again later.",
+                typingSpeed: 25,
+                fabIcon: "",
+                draggable: true
+            }, extConfig.ui || {}),
+            chat: Object.assign({
+                storageKey: "aichat_plugin_history",
+                maxHistory: 20,
+                pageContextMaxLength: 3000,
+                welcomeMsg: "Welcome to here! How can I help you?",
+                welcomeOptions: [],
+                systemPrompt: "You are a helpful AI assistant."
+            }, extConfig.chat || {})
+        };
+        
+        if (Array.isArray(this.config.chat.systemPrompt)) {
+            this.config.chat.systemPrompt = this.config.chat.systemPrompt.join('\n');
+        }
     }
 
     initUI() {
@@ -134,23 +126,26 @@ class AIChatPlugin {
         });
 
         this.chatHistoryDOM.addEventListener("click", (e) => {
-            const target = e.target.closest('.AIChat-Plug-in-quick-action');
+            const target = e.target.closest('.aichat-chat-quick-action');
             if (target) {
-                e.preventDefault();   // 阻止任何默认行为
-                e.stopPropagation();  // 阻止冒泡
-                
                 let textToSend = target.getAttribute("data-send");
                 if (!textToSend) return;
-                
-                // 解析 "||" 并随机抽取一条发送
-                if (textToSend.includes("||")) {
-                    const parts = textToSend.split("||").map(s => s.trim());
-                    textToSend = parts[Math.floor(Math.random() * parts.length)];
-                }
-                
+
+                if (textToSend.startsWith('[')) {
+                    try {
+                        const parts = JSON.parse(textToSend);
+                        if (Array.isArray(parts) && parts.length > 0) {
+                            textToSend = parts[Math.floor(Math.random() * parts.length)];
+                        }
+                    } catch (err) {
+                        console.warn("AIChat: Failed to parse the options array", err);
+                    }
+                } 
+
                 this.sendRequest(textToSend);
             }
         });
+
         document.getElementById("AIChat-close").addEventListener("click", () => this.toggle());
         document.getElementById("AIChat-clear").addEventListener("click", () => {
             localStorage.removeItem(this.storageKey);
@@ -484,7 +479,7 @@ class AIChatPlugin {
 
     async initBlogIndex() {
         try {
-            const res = await fetch(this.chatCfg.searchXmlPath);
+            const res = await fetch(this.config.searchXmlPath);
             if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
             const xmlText = await res.text();
             const parser = new DOMParser();
@@ -501,21 +496,27 @@ class AIChatPlugin {
                     tempDoc.querySelectorAll('script, style, noscript, link, iframe, svg').forEach(el => el.remove());
                     pureText = tempDoc.body.textContent.replace(/\s+/g, ' ').trim();
                 }
+
+                let rawUrl = urlNode ? urlNode.textContent.trim() : "";
+                if (rawUrl && rawUrl.startsWith('/')) {
+                    rawUrl = window.location.origin + rawUrl;
+                }
+
                 return {
                     title: titleNode ? titleNode.textContent.trim() : "",
-                    url: urlNode ? urlNode.textContent.trim() : "",
+                    url: rawUrl,
                     content: pureText
                 };
             });
         } catch (e) {
-            console.warn(`RAG 降级：无法加载索引。`, e);
+            console.warn(`RAG downgrade: Unable to load index.`, e);
         }
     }
 
     searchLocalBlog(keyword) {
         if (!this.blogIndex.length) return "";
         let searchTerms = keyword;
-        const titleMatch = keyword.match(/《(.*?)》/);
+        const titleMatch = keyword.match(/\[(.*?)\]/);
         if (titleMatch && titleMatch[1]) {
             searchTerms = titleMatch[1].trim();
         } else {
@@ -534,8 +535,14 @@ class AIChatPlugin {
     }
 
     getCurrentPageContext() {
-        const articleDOM = document.querySelector(this.chatCfg.pageContextSelector);
+        const selectors = this.config.pageContextSelector.split(',').map(s => s.trim());
+        let articleDOM = null;
+        for (let selector of selectors) {
+            articleDOM = document.querySelector(selector);
+            if (articleDOM) break;
+        }
         if (!articleDOM) return "";
+
         const titleDOM = document.querySelector('h1.post-title') || document.querySelector('title');
         const title = titleDOM ? titleDOM.innerText.trim() : "当前页面";
 
@@ -598,10 +605,15 @@ class AIChatPlugin {
                 }
                 
                 if (msg.options && msg.options.length > 0 && !msg.isTyping) {
-                    let optionsHTML = `<div class="AIChat-options">`;
+                    let optionsHTML = `<div class="aichat-welcome-options" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(128,128,128,0.3);">`;
+                    
                     msg.options.forEach(opt => {
-                        optionsHTML += `<div class="AIChat-option-item">
-                            <a class="AIChat-Plug-in-quick-action" data-send="${opt.send}">
+                        let sendData = Array.isArray(opt.send) 
+                            ? JSON.stringify(opt.send).replace(/"/g, '&quot;') 
+                            : opt.send;
+
+                        optionsHTML += `<div style="margin-top: 6px;">
+                            <a href="javascript:void(0);" class="aichat-chat-quick-action" data-send="${sendData}" style="color: #0078D7; text-decoration: none; font-size: 0.95em; cursor: pointer;">
                                 👉 ${opt.display}
                             </a>
                         </div>`;
@@ -717,8 +729,6 @@ class AIChatPlugin {
     }
 }
 
-window.AIChatPlugin = AIChatPlugin;
-
 (function autoBootstrapper() {
     let basePath = '/aichat/'; // 兜底默认路径
     const currentScript = document.currentScript;
@@ -749,7 +759,7 @@ window.AIChatPlugin = AIChatPlugin;
         markedScript.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
         markedScript.onload = initPlugin; 
         markedScript.onerror = () => {
-            console.warn("AIChat: marked.js 加载失败，将回退至无 Markdown 渲染模式。");
+            console.warn("AIChat: marked.js failed to load, and will fallback to a mode without Markdown rendering.");
             initPlugin();
         };
         document.body.appendChild(markedScript);
@@ -757,3 +767,6 @@ window.AIChatPlugin = AIChatPlugin;
         initPlugin();
     }
 })();
+
+new AIChatPlugin();
+

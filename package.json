@@ -1,0 +1,36 @@
+{
+  "name": "hexo-plugin-aichat",
+  "version": "1.0.0",
+  "description": "一个为 Hexo 博客提供 RAG 增强检索与 AI 对话功能的悬浮窗插件",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "hexo",
+    "hexo-plugin",
+    "ai",
+    "chat",
+    "rag",
+    "deepseek"
+  ],
+  "author": "luotian <chen.r.z@foxmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LuoTian001/hexo-AIChat-Plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LuoTian001/hexo-AIChat-Plugin/issues"
+  },
+  "homepage": "https://github.com/LuoTian001/hexo-AIChat-Plugin#readme",
+  "dependencies": {
+  },
+  "peerDependencies": {
+    "hexo": ">= 5.0.0"
+  },
+  "files": [
+    "index.js",
+    "assets/"
+  ]
+}
